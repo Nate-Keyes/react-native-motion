@@ -1,81 +1,94 @@
-import type { SpringConfig, TimingConfig, PresetConfig, PresetName, AltName } from './types';
+import type {
+  SpringConfig,
+  TimingConfig,
+  VariableTimingConfig,
+  PresetConfig,
+  PresetName,
+  AltName,
+} from './types';
 
 // ---------------------------------------------------------------------------
-// Spring presets
+// Move In — spring entrances with 0.15 bounce
 // ---------------------------------------------------------------------------
 
+/** Objects smaller than 1/8 screen. */
 export const moveInSm: SpringConfig = {
   type: 'spring',
-  stiffness: 200,
-  damping: 45,
+  stiffness: 815,
+  damping: 48,
   mass: 1,
   overshootClamping: false,
+  approximateDuration: 220,
+  bounce: 0.15,
 };
 
+/** Objects between 1/8 and 2/3 screen. */
 export const moveInMd: SpringConfig = {
   type: 'spring',
-  stiffness: 200,
+  stiffness: 504,
   damping: 38,
   mass: 1,
   overshootClamping: false,
+  approximateDuration: 280,
+  bounce: 0.15,
 };
 
+/** Objects larger than 2/3 screen. */
 export const moveInLg: SpringConfig = {
   type: 'spring',
-  stiffness: 200,
-  damping: 32,
-  mass: 1,
+  stiffness: 342,
+  damping: 31,
+  mass: 1.3,
   overshootClamping: false,
-};
-
-export const moveOutSm: SpringConfig = {
-  type: 'spring',
-  stiffness: 200,
-  damping: 48,
-  mass: 1,
-  overshootClamping: true,
-};
-
-export const moveOutMd: SpringConfig = {
-  type: 'spring',
-  stiffness: 200,
-  damping: 63,
-  mass: 1,
-  overshootClamping: true,
-};
-
-export const moveOutLg: SpringConfig = {
-  type: 'spring',
-  stiffness: 200,
-  damping: 57,
-  mass: 1,
-  overshootClamping: true,
-};
-
-export const changeStateSizeSm: SpringConfig = {
-  type: 'spring',
-  stiffness: 685,
-  damping: 34,
-  mass: 1,
-  overshootClamping: false,
-};
-
-export const changeStateSizeMd: SpringConfig = {
-  type: 'spring',
-  stiffness: 685,
-  damping: 34,
-  mass: 1,
-  overshootClamping: false,
+  approximateDuration: 340,
+  bounce: 0.15,
 };
 
 // ---------------------------------------------------------------------------
-// Timing presets
+// Move Out — critically-damped springs (0 bounce, overshoot clamped)
+// ---------------------------------------------------------------------------
+
+/** Objects smaller than 1/3 screen. */
+export const moveOutSm: SpringConfig = {
+  type: 'spring',
+  stiffness: 1218,
+  damping: 69,
+  mass: 1,
+  overshootClamping: true,
+  approximateDuration: 180,
+  bounce: 0,
+};
+
+/** Objects between 1/3 and 2/3 screen. */
+export const moveOutMd: SpringConfig = {
+  type: 'spring',
+  stiffness: 987,
+  damping: 62,
+  mass: 1,
+  overshootClamping: true,
+  approximateDuration: 200,
+  bounce: 0,
+};
+
+/** Objects larger than 2/3 screen. */
+export const moveOutLg: SpringConfig = {
+  type: 'spring',
+  stiffness: 816,
+  damping: 57,
+  mass: 1,
+  overshootClamping: true,
+  approximateDuration: 220,
+  bounce: 0,
+};
+
+// ---------------------------------------------------------------------------
+// Appear / Disappear — timing-based opacity transitions
 // ---------------------------------------------------------------------------
 
 export const appear: TimingConfig = {
   type: 'timing',
   duration: 220,
-  easing: 'ease',
+  easing: 'ease-out',
 };
 
 export const disappear: TimingConfig = {
@@ -84,21 +97,62 @@ export const disappear: TimingConfig = {
   easing: 'ease-out',
 };
 
-export const changeStateColor: TimingConfig = {
-  type: 'timing',
-  duration: 200,
+// ---------------------------------------------------------------------------
+// State Change — Color / Opacity (variable duration by element size)
+// ---------------------------------------------------------------------------
+
+export const changeStateColor: VariableTimingConfig = {
+  type: 'variable-timing',
+  durationSmall: 100,
+  durationLarge: 2000,
   easing: 'ease-in-out',
 };
 
-export const loading: TimingConfig = {
-  type: 'timing',
-  duration: 1000,
+// ---------------------------------------------------------------------------
+// State Change — Size (spring)
+// ---------------------------------------------------------------------------
+
+/** Incremental size changes: sm→sm, md→md, lg→lg, sm→md, md→lg. */
+export const changeStateSizeSm: SpringConfig = {
+  type: 'spring',
+  stiffness: 685,
+  damping: 44,
+  mass: 1,
+  overshootClamping: false,
+  approximateDuration: 240,
+  bounce: 0.15,
+};
+
+/** Dramatic size change: sm→lg. */
+export const changeStateSizeMd: SpringConfig = {
+  type: 'spring',
+  stiffness: 342,
+  damping: 31,
+  mass: 1,
+  overshootClamping: false,
+  approximateDuration: 340,
+  bounce: 0.15,
+};
+
+// ---------------------------------------------------------------------------
+// Loading — Movement (variable duration, linear)
+// ---------------------------------------------------------------------------
+
+export const loading: VariableTimingConfig = {
+  type: 'variable-timing',
+  durationSmall: 750,
+  durationLarge: 2000,
   easing: 'linear',
 };
 
-export const loadingColor: TimingConfig = {
-  type: 'timing',
-  duration: 200,
+// ---------------------------------------------------------------------------
+// Loading — Color / Opacity (variable duration, ease-in-out)
+// ---------------------------------------------------------------------------
+
+export const loadingColor: VariableTimingConfig = {
+  type: 'variable-timing',
+  durationSmall: 100,
+  durationLarge: 1500,
   easing: 'ease-in-out',
 };
 
@@ -122,17 +176,18 @@ export const presets: Record<PresetName, PresetConfig> = {
   'loading-color': loadingColor,
 };
 
-/** Fun alternate names from the design spec. */
 const altNameMap: Record<AltName, PresetName> = {
-  whooshle: 'move-in-sm',
-  whooshdle: 'move-in-md',
-  whooshddle: 'move-in-lg',
-  whoosh: 'move-out-sm',
+  whobble: 'move-in-sm',
+  whoobble: 'move-in-md',
+  whooobble: 'move-in-lg',
+  whosh: 'move-out-sm',
+  whoosh: 'move-out-md',
+  whooosh: 'move-out-lg',
+  'loading-linear': 'loading',
 };
 
 /**
  * Resolve a preset name (canonical or alt) to its config.
- * Throws if the name is unknown.
  */
 export function resolvePreset(name: PresetName | AltName): PresetConfig {
   if (name in presets) {
@@ -145,8 +200,8 @@ export function resolvePreset(name: PresetName | AltName): PresetConfig {
 }
 
 /**
- * Returns a spring preset with an adjusted mass for a smoother bounce.
- * Tip from the design spec: increase mass up to 1.3 for a softer feel.
+ * Returns a spring preset with an adjusted mass for a softer bounce.
+ * From the spec: increase mass up to 1.3 for a smoother feel.
  */
 export function withMass(
   name: PresetName | AltName,

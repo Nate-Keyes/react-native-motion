@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import {
   useSharedValue,
   useAnimatedStyle,
-  type SharedValue,
 } from 'react-native-reanimated';
 import type { PresetName, AltName } from './types';
 import { withMotion } from './animate';
@@ -14,12 +13,13 @@ type MotionValues = Partial<Record<AnimatableProperty, number>>;
 type UseMotionOptions = {
   from: MotionValues;
   to: MotionValues;
+  /** Start animating on mount. Defaults to true. */
   autoPlay?: boolean;
   delay?: number;
 };
 
 /**
- * Hook that creates animated values and an animated style driven by a preset.
+ * Hook that drives animated values with a preset.
  *
  * ```tsx
  * const { animatedStyle, play, reset } = useMotion('move-in-sm', {
@@ -36,7 +36,7 @@ export function useMotion(
 ) {
   const { from, to, delay = 0 } = options;
 
-  const progress: Record<string, SharedValue<number>> = {};
+  const progress: Record<string, ReturnType<typeof useSharedValue>> = {};
   const keys = Object.keys(from) as AnimatableProperty[];
 
   for (const key of keys) {
@@ -80,9 +80,7 @@ export function useMotion(
     return style;
   });
 
-  // Auto-play on mount if requested (default true)
   if (options.autoPlay !== false) {
-    // Trigger on next frame so the initial "from" values render first
     setTimeout(play, 0);
   }
 

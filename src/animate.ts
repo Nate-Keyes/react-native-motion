@@ -6,17 +6,21 @@ import {
   type WithSpringConfig,
   type WithTimingConfig,
 } from 'react-native-reanimated';
-import type { PresetConfig, PresetName, AltName, TimingConfig } from './types';
+import type {
+  PresetConfig,
+  PresetName,
+  AltName,
+  SpringConfig,
+  TimingConfig,
+  VariableTimingConfig,
+} from './types';
 import { resolvePreset } from './presets';
 
 // ---------------------------------------------------------------------------
-// Config converters – turn our preset objects into Reanimated configs
+// Config converters
 // ---------------------------------------------------------------------------
 
-export function toSpringConfig(config: PresetConfig): WithSpringConfig {
-  if (config.type !== 'spring') {
-    throw new Error('[motion] Expected a spring preset');
-  }
+export function toSpringConfig(config: SpringConfig): WithSpringConfig {
   return {
     stiffness: config.stiffness,
     damping: config.damping,
@@ -26,31 +30,44 @@ export function toSpringConfig(config: PresetConfig): WithSpringConfig {
 }
 
 const EASING_MAP = {
-  ease: Easing.ease,
-  'ease-in': Easing.in(Easing.ease),
   'ease-out': Easing.out(Easing.ease),
   'ease-in-out': Easing.inOut(Easing.ease),
   linear: Easing.linear,
 } as const;
 
-export function toTimingConfig(config: PresetConfig): WithTimingConfig {
-  if (config.type !== 'timing') {
-    throw new Error('[motion] Expected a timing preset');
-  }
+export function toTimingConfig(
+  config: TimingConfig | VariableTimingConfig,
+  duration?: number
+): WithTimingConfig {
+  const d =
+    duration ??
+    (config.type === 'timing' ? config.duration : config.durationSmall);
   return {
-    duration: config.duration,
+    duration: d,
     easing: EASING_MAP[config.easing],
   };
 }
 
 // ---------------------------------------------------------------------------
-// withMotion – drop-in replacement for withSpring / withTiming
+// withMotion — the main API
 // ---------------------------------------------------------------------------
 
+type MotionOptions = {
+  delay?: number;
+  callback?: (finished?: boolean) => void;
+};
+
+/**
+ * Drop-in replacement for `withSpring` / `withTiming` that reads from presets.
+ *
+ * For variable-duration presets (`change-state-color`, `loading`,
+ * `loading-color`) this uses the small-object duration by default.
+ * Use `withMotionForArea` for size-aware durations.
+ */
 export function withMotion(
   name: PresetName | AltName,
   toValue: number,
-  options?: { delay?: number; callback?: (finished?: boolean) => void }
+  options?: MotionOptions
 ) {
   const config = resolvePreset(name);
   const { delay = 0, callback } = options ?? {};
@@ -63,45 +80,45 @@ export function withMotion(
     animation = withTiming(toValue, toTimingConfig(config), callback);
   }
 
-  if (delay > 0) {
-    return withDelay(delay, animation);
-  }
-  return animation;
+  return delay > 0 ? withDelay(delay, animation) : animation;
 }
 
 // ---------------------------------------------------------------------------
-// Duration helpers for variable-duration presets
+// Variable-duration helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Calculate a duration for size-dependent presets (change-state-color,
- * loading-color) based on the area of the element in square pixels.
+ * Interpolate duration between small and large bounds based on element area.
  *
- * Follows the design spec guidance:
- *   - small objects (≤ 100 sq px) → 100 ms
- *   - medium objects (~250 sq px) → 150 ms
- *   - larger objects (≤ 2500 sq px) → 200 ms
- *   - very large objects → up to 300 ms
+ * The spec ties duration to the visual weight of the element:
+ *   - Small objects (icons, badges) get snappy transitions
+ *   - Large objects (skeletons, full-width cards) get slower, gentler ones
+ *
+ * `areaSqPx` is the element's area in square pixels.
+ * `screenArea` is the total screen area (defaults to 393 x 852 — iPhone 15 logical points).
  */
-export function durationForArea(areaSqPx: number): number {
+export function durationForArea(
+  config: VariableTimingConfig,
+  areaSqPx: number,
+  screenArea = 393 * 852
+): number {
   'worklet';
-  if (areaSqPx <= 100) return 100;
-  if (areaSqPx <= 250) return 150;
-  if (areaSqPx <= 2500) return 200;
-  return 300;
+  const ratio = Math.min(areaSqPx / screenArea, 1);
+  const { durationSmall, durationLarge } = config;
+  return Math.round(durationSmall + ratio * (durationLarge - durationSmall));
 }
 
 /**
- * Create a timing animation with a variable duration based on element area.
+ * Create a timing animation whose duration scales with element area.
  */
 export function withMotionForArea(
   name: 'change-state-color' | 'loading' | 'loading-color',
   toValue: number,
   areaSqPx: number,
-  options?: { delay?: number; callback?: (finished?: boolean) => void }
+  options?: MotionOptions & { screenArea?: number }
 ) {
-  const config = resolvePreset(name) as TimingConfig;
-  const duration = durationForArea(areaSqPx);
+  const config = resolvePreset(name) as VariableTimingConfig;
+  const duration = durationForArea(config, areaSqPx, options?.screenArea);
   const { delay = 0, callback } = options ?? {};
 
   const animation = withTiming(
@@ -110,8 +127,5 @@ export function withMotionForArea(
     callback
   );
 
-  if (delay > 0) {
-    return withDelay(delay, animation);
-  }
-  return animation;
+  return delay > 0 ? withDelay(delay, animation) : animation;
 }

@@ -39,8 +39,10 @@ export type {
   PresetConfig,
   SpringConfig,
   TimingConfig,
+  VariableTimingConfig,
   PresetName,
   SpringPresetName,
   TimingPresetName,
+  VariableTimingPresetName,
   AltName,
 } from './types';

@@ -17,24 +17,17 @@ type AnimatableValues = {
 };
 
 export type MotionViewProps = ViewProps & {
-  /** The animation preset to use. */
   preset?: PresetName | AltName;
-  /** Starting values. */
   from?: AnimatableValues;
-  /** Target values. */
   to?: AnimatableValues;
-  /** Delay in ms before the animation starts. */
   delay?: number;
-  /** Whether to animate on mount. Defaults to true. */
   autoPlay?: boolean;
-  /** Called when the animation finishes. */
   onComplete?: () => void;
   style?: ViewStyle;
 };
 
 /**
- * A thin wrapper around `Animated.View` that animates between `from` and `to`
- * values using the given preset.
+ * Animated View driven by a preset.
  *
  * ```tsx
  * <MotionView
